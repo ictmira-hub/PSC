@@ -1,0 +1,6 @@
+{
+  "name": "Packsify Links Vault",
+  "description": "Central repository for team UTM links, marketing campaign assets, and video walkthroughs with 1-click CS and Growth team copy tools and admin controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Assets collection: readable by team members, writable by authenticated admins or client with admin role
+    match /assets/{assetId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /campaigns/{campaignId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

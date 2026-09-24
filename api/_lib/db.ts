@@ -1,16 +1,29 @@
-import { neon } from '@neondatabase/serverless';
+import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 
 // Vercel's native Postgres integration (Neon) sets DATABASE_URL when the
 // database is connected from the project's Storage tab. POSTGRES_URL is
 // kept as a fallback for older/alternate Postgres integrations.
-const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-if (!connectionString) {
-  throw new Error(
-    'No database connection string found. Connect a Postgres database to this project from the Vercel Storage tab (sets DATABASE_URL automatically).'
-  );
+//
+// Lazily created (not at module import time): a throw during import can
+// crash every function that imports this module, not just the one
+// actually trying to run a query. Each route's own try/catch is what
+// should surface a missing-database error, not an unhandled import crash.
+let cached: NeonQueryFunction<false, false> | null = null;
+
+function getSql(): NeonQueryFunction<false, false> {
+  if (cached) return cached;
+  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!connectionString) {
+    throw new Error(
+      'No database connection string found (DATABASE_URL/POSTGRES_URL not set). Connect a Postgres database to this project from the Vercel Storage tab.'
+    );
+  }
+  cached = neon(connectionString);
+  return cached;
 }
 
-export const sql = neon(connectionString);
+export const sql: NeonQueryFunction<false, false> = ((...args: Parameters<NeonQueryFunction<false, false>>) =>
+  getSql()(...args)) as NeonQueryFunction<false, false>;
 
 // AssetItem shape mirrors src/types.ts (kept in sync manually since /api
 // runs as separate serverless functions from the Vite-built client).

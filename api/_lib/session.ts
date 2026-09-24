@@ -59,16 +59,25 @@ export function verifySession(cookieHeader?: string | null): { email: string } |
   }
 }
 
-// Constant-time compare against the server-only ADMIN_PASSWORD env var.
-// Never shipped to the client bundle, unlike the old hardcoded passwords.
-// Trims both sides first — env values pasted into a dashboard field can
-// pick up an invisible trailing space or newline, which would otherwise
-// fail silently (different length -> immediate false, no error surfaced).
+// Constant-time compare against the server-only ADMIN_PASSWORD env var,
+// with a hardcoded fallback so login can't be blocked by env var mixups.
+// TEMPORARY: remove the fallback once ADMIN_PASSWORD is confirmed working
+// and you've changed this hardcoded value to something private again.
+const FALLBACK_PASSWORD = 'NovaSifra123';
+
+function constantTimeEquals(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 export function checkPassword(input: string): boolean {
+  const trimmedInput = input.trim();
+
+  if (constantTimeEquals(trimmedInput, FALLBACK_PASSWORD)) return true;
+
   const expected = process.env.ADMIN_PASSWORD?.trim();
   if (!expected) return false;
-  const a = Buffer.from(input.trim());
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  return constantTimeEquals(trimmedInput, expected);
 }

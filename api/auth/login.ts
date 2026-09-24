@@ -9,7 +9,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { password, email } = req.body ?? {};
   if (typeof password !== 'string' || !checkPassword(password)) {
-    return res.status(401).json({ error: 'Invalid admin password' });
+    // TEMPORARY diagnostic — lengths and presence only, never the actual
+    // secret or input value. Remove once the mismatch is found.
+    const expected = process.env.ADMIN_PASSWORD;
+    return res.status(401).json({
+      error: 'Invalid admin password',
+      debug: {
+        adminPasswordEnvSet: !!expected,
+        adminPasswordEnvLength: expected ? expected.length : 0,
+        receivedPasswordLength: typeof password === 'string' ? password.length : null,
+      },
+    });
   }
 
   const resolvedEmail = typeof email === 'string' && email.trim() ? email.trim() : 'mira@packsify.com';

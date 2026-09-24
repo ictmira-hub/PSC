@@ -6,18 +6,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return res.status(405).end();
   }
-  await ensureSchema();
+  try {
+    await ensureSchema();
 
-  const id = req.query.id as string;
-  const { team } = req.body ?? {};
+    const id = req.query.id as string;
+    const { team } = req.body ?? {};
 
-  if (team === 'CS') {
-    await sql`UPDATE assets SET copy_count_cs = copy_count_cs + 1 WHERE id = ${id}`;
-  } else if (team === 'Growth') {
-    await sql`UPDATE assets SET copy_count_growth = copy_count_growth + 1 WHERE id = ${id}`;
-  } else {
-    return res.status(400).json({ error: 'team must be "CS" or "Growth"' });
+    if (team === 'CS') {
+      await sql`UPDATE assets SET copy_count_cs = copy_count_cs + 1 WHERE id = ${id}`;
+    } else if (team === 'Growth') {
+      await sql`UPDATE assets SET copy_count_growth = copy_count_growth + 1 WHERE id = ${id}`;
+    } else {
+      return res.status(400).json({ error: 'team must be "CS" or "Growth"' });
+    }
+
+    return res.status(200).json({ ok: true });
+  } catch (err: any) {
+    console.error('track handler error:', err);
+    return res.status(500).json({ error: 'Internal error', detail: String(err?.message ?? err) });
   }
-
-  return res.status(200).json({ ok: true });
 }

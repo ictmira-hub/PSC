@@ -61,10 +61,13 @@ export function verifySession(cookieHeader?: string | null): { email: string } |
 
 // Constant-time compare against the server-only ADMIN_PASSWORD env var.
 // Never shipped to the client bundle, unlike the old hardcoded passwords.
+// Trims both sides first — env values pasted into a dashboard field can
+// pick up an invisible trailing space or newline, which would otherwise
+// fail silently (different length -> immediate false, no error surfaced).
 export function checkPassword(input: string): boolean {
-  const expected = process.env.ADMIN_PASSWORD;
+  const expected = process.env.ADMIN_PASSWORD?.trim();
   if (!expected) return false;
-  const a = Buffer.from(input);
+  const a = Buffer.from(input.trim());
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);

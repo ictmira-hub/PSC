@@ -15,7 +15,7 @@ interface AdminLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: AdminUser;
-  onLogin: (password: string, email?: string) => boolean;
+  onLogin: (password: string, email?: string) => Promise<boolean>;
   onLogout: () => void;
 }
 
@@ -30,15 +30,18 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   const [email, setEmail] = useState('mira@packsify.com');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    // Support admin passwords
-    const valid = onLogin(password, email);
+    setSubmitting(true);
+
+    const valid = await onLogin(password, email);
+    setSubmitting(false);
+
     if (valid) {
       setSuccess(true);
       setTimeout(() => {
@@ -47,7 +50,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         onClose();
       }, 900);
     } else {
-      setError('Invalid admin password. Try "packsify2026" or "admin123"');
+      setError('Invalid admin password.');
     }
   };
 
@@ -165,9 +168,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">
-                Demo Admin Password: <code className="text-blue-400 font-mono">packsify2026</code> or <code className="text-blue-400 font-mono">admin123</code>
-              </p>
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2.5">
@@ -180,10 +180,11 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-1.5"
+                disabled={submitting}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Verify Admin Access</span>
+                <span>{submitting ? 'Verifying…' : 'Verify Admin Access'}</span>
               </button>
             </div>
           </form>

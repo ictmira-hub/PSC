@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { AssetItem, AdminUser } from '../types';
-import { trackCopyClick } from '../lib/firebase';
+import { trackCopyClick } from '../lib/api';
 
 interface AssetCardProps {
   asset: AssetItem;

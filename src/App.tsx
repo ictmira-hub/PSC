@@ -32,8 +32,10 @@ import {
   updateAssetDoc, 
   deleteAssetDoc, 
   getLocalCachedAssets,
-  seedInitialAssetsIfEmpty
-} from './lib/firebase';
+  loginAdmin,
+  logoutAdmin,
+  fetchSession
+} from './lib/api';
 import { INITIAL_ASSETS } from './data/seedData';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -52,23 +54,12 @@ export default function App() {
   const [assets, setAssets] = useState<AssetItem[]>(getLocalCachedAssets());
   const [loading, setLoading] = useState(true);
 
-  // Admin User Role State
-  const [user, setUser] = useState<AdminUser>(() => {
-    const saved = localStorage.getItem('packsify_admin_session');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.warn('Session parse error:', e);
-      }
-    }
-    // Default to admin for initial authorized setup or viewer
-    return {
-      isAuthenticated: true,
-      role: 'admin',
-      email: 'mira@packsify.com',
-      displayName: 'Mira (Admin & Growth)',
-    };
+  // Admin User Role State. Defaults to viewer; the actual admin state is
+  // confirmed against the server's signed session cookie on mount (see
+  // effect below) rather than trusted from localStorage.
+  const [user, setUser] = useState<AdminUser>({
+    isAuthenticated: false,
+    role: 'viewer',
   });
 
   // Filter State
@@ -112,7 +103,12 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Subscribe to Cloud Database (Firestore)
+  // Restore admin state from the server's signed session cookie (if any).
+  useEffect(() => {
+    fetchSession().then(setUser);
+  }, []);
+
+  // Subscribe to asset data (polled from the Postgres-backed API)
   useEffect(() => {
     setLoading(true);
     const unsubscribe = subscribeToAssets(
@@ -148,18 +144,11 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Handle Admin Login
-  const handleAdminLogin = (password: string, email?: string): boolean => {
-    const validPasswords = ['packsify2026', 'admin123', 'packsify', 'mira2026'];
-    if (validPasswords.includes(password.trim())) {
-      const newUser: AdminUser = {
-        isAuthenticated: true,
-        role: 'admin',
-        email: email || 'mira@packsify.com',
-        displayName: 'Admin User',
-      };
+  // Handle Admin Login — verified server-side against ADMIN_PASSWORD (env var)
+  const handleAdminLogin = async (password: string, email?: string): Promise<boolean> => {
+    const newUser = await loginAdmin(password, email);
+    if (newUser) {
       setUser(newUser);
-      localStorage.setItem('packsify_admin_session', JSON.stringify(newUser));
       showToast('Signed in as Authorized Admin');
       return true;
     }
@@ -167,13 +156,9 @@ export default function App() {
   };
 
   // Handle Admin Logout / Switch to Viewer
-  const handleAdminLogout = () => {
-    const newUser: AdminUser = {
-      isAuthenticated: false,
-      role: 'viewer',
-    };
-    setUser(newUser);
-    localStorage.setItem('packsify_admin_session', JSON.stringify(newUser));
+  const handleAdminLogout = async () => {
+    await logoutAdmin();
+    setUser({ isAuthenticated: false, role: 'viewer' });
     showToast('Switched to CS/Growth Team Viewer mode');
   };
 
